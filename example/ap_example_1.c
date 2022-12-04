@@ -1,24 +1,24 @@
 
-#include "ui_scrn_custom.h"
+#include "ap_example_1.h"
 #include "math.h"
 #include "active_pointer.h"
 
 
-lv_obj_t* custom_scrn;
+lv_obj_t* scrn_example_1_scrn;
 lv_obj_t* slider[10];
 lv_obj_t* drag_obj[10];
 
 
 static void ap_test(void );
 
-void  ui_init (void) {
-	scrn_custom_init();
-	scrn_custom_show ();
+__weak void  ui_init (void) {
+	scrn_example_1_init();
+	scrn_example_1_show ();
 };
 
 
-static void scrn_custom_show(void) {
-	lv_scr_load( custom_scrn );
+static void scrn_example_1_show(void) {
+	lv_scr_load( scrn_example_1_scrn );
 }
 
 
@@ -63,20 +63,20 @@ static void run_ap_cb(lv_event_t* e ) {  /* objects must be redrawn at least onc
 	ap_test();
 }
 
-static void scrn_custom_init(void) {
+static void scrn_example_1_init(void) {
 	static lv_style_t style_empty;
 	lv_style_init(&style_empty);
-	custom_scrn = lv_obj_create(NULL);
-	lv_obj_add_style(custom_scrn, &style_empty, LV_STATE_DEFAULT);
-	lv_obj_set_style_bg_color(custom_scrn, lv_color_make(0, 0, 0), LV_STATE_DEFAULT);
-	lv_obj_clear_flag(custom_scrn, LV_OBJ_FLAG_SCROLLABLE );
-	lv_obj_set_width(custom_scrn, 800);
-	lv_obj_set_height(custom_scrn, 480);
-	lv_obj_add_event_cb(custom_scrn, run_ap_cb, LV_EVENT_DRAW_POST, 0);  /*objects must be redrawn at least once to make sure their coordinates are updated. (affects: ap_add_obj()) */
+	scrn_example_1_scrn = lv_obj_create(NULL);
+	lv_obj_add_style(scrn_example_1_scrn, &style_empty, LV_STATE_DEFAULT);
+	lv_obj_set_style_bg_color(scrn_example_1_scrn, lv_color_make(0, 0, 0), LV_STATE_DEFAULT);
+	lv_obj_clear_flag(scrn_example_1_scrn, LV_OBJ_FLAG_SCROLLABLE );
+	lv_obj_set_width(scrn_example_1_scrn, 800);
+	lv_obj_set_height(scrn_example_1_scrn, 480);
+	lv_obj_add_event_cb(scrn_example_1_scrn, run_ap_cb, LV_EVENT_DRAW_POST, 0);  /*objects must be redrawn at least once to make sure their coordinates are updated. (affects: ap_add_obj()) */
 
 	for (int i = 0 ; i < 10; i++) {
 		/*slider*/
-		slider[i] = lv_slider_create(custom_scrn);
+		slider[i] = lv_slider_create(scrn_example_1_scrn);
 		lv_obj_add_style(slider[i], &style_empty, LV_STATE_DEFAULT);
 		lv_obj_set_style_radius(slider[i], LV_RADIUS_CIRCLE, LV_STATE_DEFAULT);
 		/*main*/
@@ -111,7 +111,7 @@ static void scrn_custom_init(void) {
 		lv_slider_set_range(slider[i], 0, 100);
 		lv_slider_set_value(slider[i], 0, true);
 		/* draggable objects*/
-		drag_obj[i] = lv_obj_create(custom_scrn);
+		drag_obj[i] = lv_obj_create(scrn_example_1_scrn);
 		lv_obj_remove_style(drag_obj[i], NULL, LV_STATE_ANY | LV_PART_ANY);
 		lv_obj_set_width(drag_obj[i], 50);
 		lv_obj_set_height(drag_obj[i], 50);
@@ -143,7 +143,7 @@ static void scrn_custom_init(void) {
 }
 
 void gen_random_sequence() {
-	int res = 0;
+	
 	ap_delete_points();
 	ap_set_circular_mode(0);
 	srand(lv_tick_get());
