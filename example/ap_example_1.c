@@ -57,7 +57,8 @@ static void slider_change_cb ( lv_event_t * e) {
 	lv_obj_set_style_bg_opa( obj, lv_slider_get_value(sld) * 255 / 100, LV_STATE_USER_1);
 }
 
-static void run_ap_cb(lv_event_t* e ) {  /* objects must be redrawn at least once to make sure their coordinates are updated. (affects: ap_add_obj()) */
+/* objects must be redrawn at least once to make sure their coordinates are updated. (affects: ap_add_obj()) */
+static void run_ap_cb(lv_event_t* e ) {  
 	lv_obj_t*  obj = lv_event_get_target(e);
 	lv_obj_remove_event_cb(obj, run_ap_cb);
 	ap_test();
@@ -72,7 +73,9 @@ static void scrn_example_1_init(void) {
 	lv_obj_clear_flag(scrn_example_1_scrn, LV_OBJ_FLAG_SCROLLABLE );
 	lv_obj_set_width(scrn_example_1_scrn, 800);
 	lv_obj_set_height(scrn_example_1_scrn, 480);
-	lv_obj_add_event_cb(scrn_example_1_scrn, run_ap_cb, LV_EVENT_DRAW_POST, 0);  /*objects must be redrawn at least once to make sure their coordinates are updated. (affects: ap_add_obj()) */
+
+/**objects must be redrawn at least once to make sure their coordinates are updated. (affects: ap_add_obj())*/
+	lv_obj_add_event_cb(scrn_example_1_scrn, run_ap_cb, LV_EVENT_DRAW_POST, 0);  
 
 	for (int i = 0 ; i < 10; i++) {
 		/*slider*/
@@ -143,31 +146,36 @@ static void scrn_example_1_init(void) {
 }
 
 void gen_random_sequence() {
-	
-	ap_delete_points();
-	ap_set_circular_mode(0);
-	srand(lv_tick_get());
+/**delete all previously defined points*/ 
+	ap_delete_points(); 
+/**this callback replaces need for circular mode*/
+	ap_set_circular_mode(0);  
+	srand(lv_tick_get());   
 
 	for(int i = 0; i < 10; i++ ) {
 		lv_coord_t h;
 		h = lv_obj_get_height(slider[i]);
-		ap_add_obj(AP_MOVE_TO, slider[i], 0, 0, 500, 500);
+/**move to center of slider bar*/
+		ap_add_obj(AP_MOVE_TO, slider[i], 0, 0, 500, 500);  
+/**move slider to random position*/ 
 		ap_add_obj(AP_DRAG_TO, slider[i], 0, rand() % h - h/2, 500, 1000);
+/**move slider to another random position*/ 
 		ap_add_obj(AP_DRAG_TO, slider[i], 0, rand() % h - h/2, 500, 1000);
+/**move to matching object to drag*/ 
 		ap_add_obj(AP_MOVE_TO, drag_obj[i], 0, 0, 500, 500);
+/*drag object to random position*/ 
 		ap_add_xy(AP_DRAG_TO, 40 + rand() % 300, 260 + rand() %  100, 500, 1000);
 	}
-
-	ap_modify_speed(7, 8, 1, 1);
+/*start new sequence*/ 
 	ap_start();
 }
 
 LV_IMG_DECLARE(pntr_image);
 
 static void ap_test(void ) {
-	ap_init(&pntr_image, lv_scr_act());
-	ap_set_recolor (lv_color_make(0, 255, 0), lv_color_make(255, 0, 0) );
-	ap_set_end_cb(gen_random_sequence);
-	gen_random_sequence();
+	ap_init(&pntr_image);/**Common initialization*/
+	ap_set_recolor (lv_color_make(0, 255, 0), lv_color_make(255, 0, 0) );/**Green for released, red for pressed*/
+	ap_set_end_cb(gen_random_sequence); /**At the end, we will reinit with random path and run again*/
+	gen_random_sequence();/**Reinit and run for first*/
 }
 

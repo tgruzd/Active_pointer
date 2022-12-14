@@ -1,7 +1,7 @@
 /**
 * @file active_pointer.c
 *
-* @autor tgruzd 
+* @author tgruzd
  */
 
 /*********************
@@ -37,6 +37,9 @@ typedef struct {
 /**********************
  *  STATIC PROTOTYPES
  **********************/
+static void ap_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data);
+static void ap_point_run( ap_target_t* target, ap_target_t* prev  );
+static int  ap_add_action(ap_action_t action, lv_obj_t* ref_obj, lv_coord_t dx, lv_coord_t dy, uint32_t delay_before, uint32_t move_time);
 
 /**********************
  *  STATIC VARIABLES
@@ -66,51 +69,32 @@ static uint8_t	first_run = 1;
  *   GLOBAL FUNCTIONS
  **********************/
 
-/**********************
- *   STATIC FUNCTIONS
- **********************/
-static void ap_point_run( ap_target_t* target, ap_target_t* prev  );
-
-static void press(void) {
-	cur_data.state  = LV_INDEV_STATE_PR;
-	lv_obj_add_state(cursor_obj, LV_STATE_PRESSED);
-	lv_timer_pause(anim_timer);
+void  ap_set_origin(lv_coord_t x, lv_coord_t y) {   //
+	ap.ref.x = x;
+	ap.ref.y = y;
 }
-
-static void release(void) {
-	cur_data.state  = LV_INDEV_STATE_REL;
-	lv_obj_clear_state(cursor_obj, LV_STATE_PRESSED);
-	lv_timer_pause(anim_timer);
-}
-
-
-
-void ap_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data) {
-	static lv_indev_state_t last = LV_INDEV_STATE_REL;
-	data->point.x =	cur_data.point.x + ap.ref.x;
-	data->point.y =	cur_data.point.y + ap.ref.y;
-	data->state = cur_data.state;
-
-	if (last == LV_INDEV_STATE_PR  ) {
-		if( last_action == AP_MOVE_TO || last_action == AP_CLICK_TO) {
-			release();
+void ap_start(void) {
+	if( ap.cnt > 0 ) {
+		if(first_run) {
+			ap_point_run(ap.target[0], &init_target);
 		}
 		else {
-			data->state = LV_INDEV_STATE_PR;
+			ap_point_run(ap.target[0], ap.target[ap.cnt - 1]);
 		}
 	}
-
-	last = cur_data.state;
-	lv_timer_resume(anim_timer);
+	else {
+		/* error */
+	}
 }
 
-void ap_set_recolor (	lv_color_t recolor_rel, lv_color_t recolor_pr ) {
-	lv_obj_set_style_img_recolor(cursor_obj, recolor_rel, LV_STATE_DEFAULT);
-	lv_obj_set_style_img_recolor(cursor_obj, recolor_pr, LV_STATE_PRESSED);
+
+
+int  ap_add_xy(ap_action_t action, lv_coord_t x, lv_coord_t y, uint32_t delay_before, uint32_t move_time) {
+	return	ap_add_action (action, NULL, x, y, delay_before, move_time);
 }
 
-void ap_set_circular_mode( uint8_t mode) {
-	ap.circ_mode = mode;
+int  ap_add_obj(ap_action_t action, lv_obj_t* obj, lv_coord_t dx, lv_coord_t dy, uint32_t delay_before, uint32_t move_time) {
+	return	ap_add_action (action, obj, dx, dy, delay_before, move_time);
 }
 
 void ap_delete_points(void) {
@@ -120,6 +104,7 @@ void ap_delete_points(void) {
 			ap.target[i] = NULL;
 		}
 	}
+
 	ap.cnt = 0;
 }
 
@@ -142,21 +127,20 @@ void ap_modify_speed ( uint16_t mult, uint16_t div, bool affects_delay, bool aff
 		if (affects_delay) {
 			ap.target[i]->delay = (ap.target[i]->delay * mult) / div  ;
 		}
-
 		if (affects_move_time) {
 			ap.target[i]->move_time =  (ap.target[i]->move_time * mult) / div ;
 		}
 	}
 }
 
-int ap_init(const lv_img_dsc_t* ptr_image, lv_obj_t* scr) {
+int ap_init(const lv_img_dsc_t* ptr_image) {
 	static lv_indev_drv_t indev_drv;
 	lv_indev_drv_init(&indev_drv);
 	indev_drv.type = LV_INDEV_TYPE_POINTER;
 	indev_drv.read_cb = ap_read;
 	static lv_indev_t* indev ;
 	indev = lv_indev_drv_register(&indev_drv);
-	cursor_obj = lv_img_create(scr);
+	cursor_obj = lv_img_create(lv_disp_get_layer_sys(indev->driver->disp));
 	lv_img_set_src(cursor_obj, ptr_image);
 	static lv_style_t empty;
 	lv_style_init(&empty);
@@ -172,9 +156,53 @@ int ap_init(const lv_img_dsc_t* ptr_image, lv_obj_t* scr) {
 }
 
 
+void ap_set_recolor (	lv_color_t recolor_rel, lv_color_t recolor_pr ) {
+	lv_obj_set_style_img_recolor(cursor_obj, recolor_rel, LV_STATE_DEFAULT);
+	lv_obj_set_style_img_recolor(cursor_obj, recolor_pr, LV_STATE_PRESSED);
+}
+
+void ap_set_circular_mode( uint8_t mode) {
+	ap.circ_mode = mode;
+}
+
+
+/**********************
+ *   STATIC FUNCTIONS
+ **********************/
+static void ap_point_run( ap_target_t* target, ap_target_t* prev  );
+
+static void press(void) {
+	cur_data.state  = LV_INDEV_STATE_PR;
+	lv_obj_add_state(cursor_obj, LV_STATE_PRESSED);
+	lv_timer_pause(anim_timer);
+}
+
+static void release(void) {
+	cur_data.state  = LV_INDEV_STATE_REL;
+	lv_obj_clear_state(cursor_obj, LV_STATE_PRESSED);
+	lv_timer_pause(anim_timer);
+}
 
 
 
+static void ap_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data) {
+	static lv_indev_state_t last = LV_INDEV_STATE_REL;
+	data->point.x =	cur_data.point.x + ap.ref.x;
+	data->point.y =	cur_data.point.y + ap.ref.y;
+	data->state = cur_data.state;
+
+	if (last == LV_INDEV_STATE_PR  ) {
+		if( last_action == AP_MOVE_TO || last_action == AP_CLICK_TO) {
+			release();
+		}
+		else {
+			data->state = LV_INDEV_STATE_PR;
+		}
+	}
+
+	last = cur_data.state;
+	lv_timer_resume(anim_timer);
+}
 
 static void set_pos_x(ap_target_t* target,  int32_t v) {
 	cur_data.point.x = v  + ap.ref.x;
@@ -203,15 +231,8 @@ static int  ap_add_action(ap_action_t action, lv_obj_t* ref_obj, lv_coord_t dx, 
 
 	return result;
 }
-int  ap_add_xy(ap_action_t action, lv_coord_t x, lv_coord_t y, uint32_t delay_before, uint32_t move_time) {
-	return	ap_add_action (action, NULL, x, y, delay_before, move_time);
-}
 
-int  ap_add_obj(ap_action_t action, lv_obj_t* obj, lv_coord_t dx, lv_coord_t dy, uint32_t delay_before, uint32_t move_time) {
-	return	ap_add_action (action, obj, dx, dy, delay_before, move_time);
-}
-
-void before_cb(lv_anim_t *a ) {  /* now pointer located in previous position*/
+static void before_cb(lv_anim_t *a ) {  /* now pointer located in previous position*/
 	if( a->var == NULL ) {
 		return;
 	}
@@ -233,7 +254,7 @@ lv_point_t   get_ref_obj_center( ap_target_t* target) {
 	return res;
 }
 
-void start_cb(lv_anim_t *a ) { /* now pointer located in previous position: good place to start dragging*/
+static void start_cb(lv_anim_t *a ) { /* now pointer located in previous position: good place to start dragging*/
 	if( a->var != NULL ) {
 		ap_target_t* target =  (ap_target_t* ) (a->var);
 
@@ -278,24 +299,21 @@ static void stop_cb(lv_anim_t *a ) {     /* now pointer located in its defined c
 	}
 	else	{
 		/*  it is last */
-	     lv_anim_del(&ap.anim_y,NULL);
-	     lv_anim_del(&ap.anim_x,NULL);
-		
-		
+		lv_anim_del(&ap.anim_y, NULL);
+		lv_anim_del(&ap.anim_x, NULL);
+
 		if(ap.circ_mode) {
 			first_run = 0;
 			ap_point_run(ap.target[0], target  );
 		}
 		else {
 			if( ap.end_sequence_cb) {
-				
 				ap.end_sequence_cb();
 			}
 		}
 	}
 }
-
-void ap_point_anim_init( ap_target_t* target,  ap_target_t* prev ) {
+static void ap_point_anim_init( ap_target_t* target,  ap_target_t* prev ) {
 	lv_point_t obj_ref = get_ref_obj_center(target);
 	lv_point_t obj_ref_prev = get_ref_obj_center(prev);
 	lv_anim_t ay;
@@ -337,29 +355,14 @@ void ap_point_anim_init( ap_target_t* target,  ap_target_t* prev ) {
 	ap.anim_x = ax;
 	return;
 }
+
 static void ap_point_run( ap_target_t* target, ap_target_t* prev  ) {
 	prev_target = prev;
 	ap_point_anim_init(target, prev);
 	lv_anim_start(&ap.anim_y);
 	lv_anim_start(&ap.anim_x);
 }
-void  ap_set_origin(lv_coord_t x, lv_coord_t y) {   //
-	ap.ref.x = x;
-	ap.ref.y = y;
-}
-void ap_start(void) {
-	if( ap.cnt > 0 ) {
-		if(first_run) {
-			ap_point_run(ap.target[0], &init_target);
-		}
-		else {
-			ap_point_run(ap.target[0], ap.target[ap.cnt - 1]);
-		}
-	}
-	else {
-		/* error */
-	}
-}
+
 
 
 
